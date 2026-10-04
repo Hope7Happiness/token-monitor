@@ -527,7 +527,8 @@ function runTokscale({
   onTerminationUnconfirmed,
   customScanPaths,
   homeDir,
-  workspaces = true
+  workspaces = true,
+  compactUsage = false
 }) {
   throwIfAborted(signal);
   const command = tokscaleCommand({ customScanPaths, homeDir });
@@ -543,7 +544,7 @@ function runTokscale({
   // Read per spawn rather than once per call: a rejection recorded by the
   // fallback below must already be visible to the unknown-client retry, which
   // would otherwise re-offer the grouping this binary just refused.
-  const groupBy = () => (workspaces && workspaceGroupBySupported(command.identity)
+  const groupBy = () => compactUsage ? 'client,model' : (workspaces && workspaceGroupBySupported(command.identity)
     ? TOKSCALE_WORKSPACE_GROUP_BY
     : TOKSCALE_SESSION_GROUP_BY);
   const runArgs = (filter, grouping) => ['--json', '--client', filter, '--group-by', grouping, ...flags];
@@ -821,6 +822,7 @@ async function collectUsageOnce(options) {
   const runTokscaleScan = options.runTokscale || ((input) => runTokscale({
     ...input,
     workspaces: projectsEnabled,
+    compactUsage: options.compactUsage === true,
     customScanPaths: options.customScanPaths,
     homeDir: options.homeDir,
     terminationOptions: options.subprocessTerminationOptions,
@@ -859,7 +861,9 @@ async function collectUsageOnce(options) {
     // across collectUsageOnce calls — every field in this object, unlike
     // that one, is intentionally rebuilt fresh on every call.
   };
-  const decorateLocalPeriods = (periods, { retryMisses = false } = {}) => applySessionMetadata(
+  // Aggregate-only consumers have no session UI. Avoid building transcript
+  // indexes and reading every historical session just to discard their metadata.
+  const decorateLocalPeriods = (periods, { retryMisses = false } = {}) => options.compactUsage === true ? undefined : applySessionMetadata(
     periods,
     options.homeDir || os.homedir(),
     // Still unconditional: only the clients whose parser records a workspace come

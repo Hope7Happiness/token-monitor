@@ -20,6 +20,10 @@ The device runtime that the widget and the agent run (`deviceRuntime.js`, `devic
 
 The "Deploy to Cloudflare" button isolates `worker/` into a fresh repo, so the Worker cannot import above its own directory. Its shared closure is `WORKER_SHARED_MODULES` in `scripts/hub-build-manifest.js`; `npm run sync:worker` vendors it into `worker/src/shared/`, mirroring each module's directory so relative requires resolve in both trees. The copies are `@generated` and CI fails on drift: edit `src/shared/`, then sync. Modules in the closure cannot use Node built-ins.
 
+## Minimal runtime
+
+The minimal branch defaults to `src/minimal/electron.js` (one desktop window) and `src/minimal/cli.js` (Node-only service/one-shot). `docs/minimal.md` owns deployment, migration and measurement details. This entry point admits only Codex, Claude and Antigravity, uses the shared collector with `compactUsage: true`, and directly selects their quota adapters rather than importing the full limits registry. The compact option asks tokscale for `client,model` rows and skips local transcript enrichment; full consumers retain the default session/workspace behavior. Native watching is opt-in; full-scan serialization, exact period deltas and self-sync behavior remain shared. The minimal HTTP adapter projects an explicit aggregate DTO rather than returning raw records or private account options. Hub delivery continues to use the existing device wire schema.
+
 ## Generated and registered state
 
 Remote Hub update checks compare `src/shared/hubBuildRegistry.json`, not the product version. It hashes the portable Hub core plus separate Node and Worker adapters, so a desktop-only release does not ask users to redeploy. The marker is a registered build identity, not attestation: describe divergent metadata as unrecognized rather than claiming every fork is detectable. Run `npm run update:hub-build` once the Hub/shared change is final; the Hub-build test fails when it is stale. Never hand-edit generated Worker metadata.

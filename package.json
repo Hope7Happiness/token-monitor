@@ -2,13 +2,13 @@
   "name": "token-monitor",
   "productName": "Token Monitor",
   "version": "0.66.0",
-  "description": "Live token & cost widget for Claude Code, Codex & Hermes — local-first, optional multi-device sync.",
-  "main": "src/electron/main.js",
+  "description": "Minimal usage and quota monitor for Codex, Claude Code and Antigravity, with a Node headless server.",
+  "main": "src/minimal/electron.js",
   "scripts": {
     "start": "npm run ensure:tokscale && electron .",
     "hub": "node src/hub/server.js",
-    "agent": "npm run ensure:tokscale && node src/agent/agent.js",
-    "agent:once": "npm run ensure:tokscale && node src/agent/agent.js --once",
+    "agent": "npm run ensure:tokscale && node src/minimal/cli.js",
+    "agent:once": "npm run ensure:tokscale && node src/minimal/cli.js --once",
     "widget": "npm run ensure:tokscale && electron .",
     "dev": "npm run ensure:tokscale && electron .",
     "ensure:tokscale": "node scripts/ensure-vendored-tokscale.js",
@@ -32,7 +32,12 @@
     "verify:release-artifact-names": "node scripts/verify-updater-artifact-names.js dist",
     "benchmark:hub-bandwidth": "node scripts/benchmark-hub-bandwidth.js",
     "lint": "eslint .",
-    "verify": "npm run lint && npm test"
+    "verify": "npm run lint && npm test",
+    "headless": "npm run ensure:tokscale && node src/minimal/cli.js",
+    "headless:once": "npm run headless -- --once",
+    "start:full": "npm run ensure:tokscale && electron src/electron/main.js",
+    "agent:full": "npm run ensure:tokscale && node src/agent/agent.js",
+    "benchmark:minimal": "node scripts/benchmark-minimal.js"
   },
   "build": {
     "appId": "com.javis.tokenmonitor",
@@ -41,6 +46,7 @@
       "output": "dist"
     },
     "files": [
+      "src/minimal/**/*",
       "src/electron/**/*",
       "src/shared/**/*",
       "scripts/vendor/tokscale.json",

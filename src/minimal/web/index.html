@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Token Monitor · minimal</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><div><span class="eyebrow">TOKEN MONITOR</span><h1>用量，一目了然<span class="tag">minimal</span></h1></div><span class="status" id="status" role="status">正在连接</span></header>
+    <form id="login" hidden><label for="secret">服务器访问密钥</label><div class="login-row"><input id="secret" type="password" autocomplete="off" required><button>连接</button></div><small>密钥仅保留在当前标签页内存中。</small></form>
+    <nav aria-label="统计周期"><button data-period="today" aria-pressed="true">今天</button><button data-period="month" aria-pressed="false">本月</button><button data-period="allTime" aria-pressed="false">累计</button></nav>
+    <section class="totals" aria-label="总用量"><div><span class="muted">总 Token</span><strong id="tokens">—</strong></div><div><span class="muted">估算费用 · USD</span><strong id="cost">—</strong></div></section>
+    <section id="clients" aria-label="工具用量"></section>
+    <div class="section-heading"><h2>账户额度</h2><span class="muted">用量与额度分别更新</span></div>
+    <section id="limits" aria-label="账户额度"><p class="muted">正在读取本机登录信息…</p></section>
+    <p id="error" class="error" role="alert" hidden></p>
+    <footer><div><span id="updated">等待首次采集</span><small id="cadence">低功耗 · 按需渲染</small></div><button id="refresh" type="button">刷新用量 ↻</button></footer>
+  </main>
+</body>
+</html>

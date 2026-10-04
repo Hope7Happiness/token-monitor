@@ -1,0 +1,20 @@
+[Unit]
+Description=Token Monitor minimal headless service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Install as a user service so ~/.codex and ~/.claude belong to the CLI user.
+WorkingDirectory=%h/token-monitor
+Environment=NODE_ENV=production
+EnvironmentFile=-%h/.config/token-monitor-minimal.env
+ExecStart=/usr/bin/node %h/token-monitor/src/minimal/cli.js
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=150
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

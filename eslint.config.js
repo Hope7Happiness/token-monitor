@@ -26,7 +26,7 @@ module.exports = [
 
   {
     // Renderer runs in the browser; UMD modules also touch module/window
-    files: ['src/electron/renderer/**/*.js'],
+    files: ['src/electron/renderer/**/*.js', 'src/minimal/web/**/*.js'],
     languageOptions: {
       sourceType: 'commonjs',
       globals: { ...globals.node, ...globals.browser },
