@@ -7,7 +7,7 @@ let timer;
 let request;
 let rendered = '';
 const byId = (id) => document.getElementById(id);
-const count = new Intl.NumberFormat('en-US');
+const count = new Intl.NumberFormat('en-US', { notation: 'compact', compactDisplay: 'short', maximumFractionDigits: 0 });
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 const statuses = { ok: '已连接', notConfigured: '未登录', unavailable: '暂不可用', unauthorized: '请重新登录', rateLimited: '请求受限', sourceRateLimited: '请求受限', error: '读取失败' };
 
