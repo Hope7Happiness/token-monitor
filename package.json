@@ -37,7 +37,8 @@
     "headless:once": "npm run headless -- --once",
     "start:full": "npm run ensure:tokscale && electron src/electron/main.js",
     "agent:full": "npm run ensure:tokscale && node src/agent/agent.js",
-    "benchmark:minimal": "node scripts/benchmark-minimal.js"
+    "benchmark:minimal": "node scripts/benchmark-minimal.js",
+    "pack:mac:minimal": "npm run ensure:tokscale && electron-builder --config scripts/electron-builder.minimal-mac.config.js --mac --dir --publish never"
   },
   "build": {
     "appId": "com.javis.tokenmonitor",

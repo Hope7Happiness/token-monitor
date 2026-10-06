@@ -12,7 +12,7 @@ Requires Node >=22.15.0; Node 24 LTS is suitable. Install desktop dependencies w
 npm start
 ```
 
-The desktop is one sandboxed Electron window displaying a local dashboard. It has no tray, background window, Edge Dock, Discord integration, updater or widget extensions. Closing it stops its collector and local HTTP service. Its randomly generated local API secret stays in Electron main.
+The desktop supports macOS and lives in the top menu bar. Click its icon to open a sandboxed usage panel; click outside it or press Escape to close it. The renderer is destroyed when dismissed, so idle monitoring retains no hidden Chromium page. The collector and local HTTP service keep running at their low-frequency intervals until you choose Quit in the icon’s right-click menu. That menu also offers optional login startup. There is no Dock icon, Edge Dock, Discord integration, updater or widget extension. Its randomly generated local API secret stays in Electron main.
 
 For the lowest resource use, run the Node service and view it in your existing browser:
 
@@ -31,6 +31,16 @@ npm run headless -- --help
 ```
 
 A one-shot prints the existing device wire record as JSON, waits for selected quota probes, and exits. `--dry-run` also collects once, skips Hub delivery, and skips managed Antigravity credential persistence. Disabling quotas with `--limits 0` avoids quota requests and login probes.
+
+## Install the macOS menu bar app
+
+Build the standalone app with the existing Electron/electron-builder toolchain:
+
+```sh
+npm run pack:mac:minimal
+```
+
+The output is under `dist/minimal-mac/mac-<arch>/Token Monitor Minimal.app`. Copy it to `~/Applications` and open it; terminal commands and a system Node installation are unnecessary after packaging. This local build is ad-hoc signed with a separate bundle identity (`local.tokenmonitor.minimal`), and is intended for local installation. It preserves other Token Monitor installations. Public distribution would require the usual Developer ID signing/notarization. The minimal macOS build excludes the full desktop UI and widget extension.
 
 ## What reduces resource use
 

@@ -1,7 +1,7 @@
 'use strict';
 
 // Run with electron tests/fixtures/minimalDesktopSmoke.js --minimal-smoke-test.
-const { app } = require('electron');
+const { app, BrowserWindow } = require('electron');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -19,6 +19,7 @@ for (const source of ['litellm', 'openrouter', 'models-dev']) {
   fs.writeFileSync(path.join(temp, 'tokscale', 'cache', `pricing-${source}.json`), JSON.stringify({ timestamp: Math.floor(Date.now() / 1000), data: {} }));
 }
 let failed = false;
+let desktop;
 const timeout = setTimeout(() => { failed = true; console.error('Desktop smoke timed out'); app.quit(); }, 30000);
 app.on('browser-window-created', (_event, window) => {
   window.webContents.once('did-finish-load', async () => {
@@ -39,6 +40,17 @@ app.on('browser-window-created', (_event, window) => {
     } catch (error) { failed = true; console.error(error); }
     clearTimeout(timeout);
     window.close();
+    setImmediate(async () => {
+      try {
+        for (let attempt = 0; attempt < 40 && BrowserWindow.getAllWindows().length; attempt++) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        assert.equal(BrowserWindow.getAllWindows().length, 0);
+        assert.equal(desktop.getTray().isDestroyed(), false);
+        console.log('minimal-menu-bar-smoke: panel dismissed; tray remains; no hidden renderer');
+      } catch (error) { failed = true; console.error(error); }
+      app.quit();
+    });
   });
 });
 app.once('will-quit', () => {
@@ -46,4 +58,19 @@ app.once('will-quit', () => {
   fs.rmSync(temp, { recursive: true, force: true });
   process.exitCode = failed ? 1 : 0;
 });
-require('../../src/minimal/electron');
+require('../../src/minimal/electron').desktopReady.then(async (controller) => {
+  desktop = controller;
+  try {
+    assert.equal(BrowserWindow.getAllWindows().length, 0);
+    assert.equal(desktop.getTray().isDestroyed(), false);
+    let bounds;
+    for (let attempt = 0; attempt < 40; attempt++) {
+      bounds = desktop.getTray().getBounds();
+      if (bounds.width > 0 && bounds.height > 0) break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    assert.ok(bounds.width > 0 && bounds.height > 0);
+    console.log(`minimal-menu-bar-smoke: startup has no renderer; tray bounds ${JSON.stringify(bounds)}`);
+    await desktop.showPanel({ focus: false });
+  } catch (error) { failed = true; console.error(error); app.quit(); }
+});
