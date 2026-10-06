@@ -9,7 +9,11 @@ async function main() {
   if (options.help) {
     console.log(`Token Monitor minimal — Codex, Claude Code, AGY
 
-npm run headless                      Local dashboard at http://127.0.0.1:17322
+npm run service:start                 Start the background collector service
+npm run tui                           View usage and quotas in your terminal
+npm run service:status                Show background service status
+npm run service:stop                  Stop the background service
+npm run headless                      Run the API service in the foreground
 npm run headless:once                 Print one usage + quota snapshot as JSON
 npm run headless:once -- --dry-run     Collect without posting to a Hub
 
@@ -19,6 +23,7 @@ npm run headless:once -- --dry-run     Collect without posting to a Hub
 --limitsRefreshMs 300000              Quota interval (minimum 60000)
 --watch 1                             Opt into native live watching
 --host 127.0.0.1 --port 17322          Dashboard bind address
+--web 1                              Enable the optional browser dashboard
 --hub https://hub.example             Optional existing Token Monitor Hub
 --secret <secret>                     Dashboard / Hub bearer secret (or env)
 --accountsFile /private/accounts.json Private managed quota accounts (chmod 600)
@@ -77,7 +82,8 @@ See docs/minimal.md for server installation and systemd configuration.`);
     }
     server = createMinimalServer(runtime, options);
     const url = await listen(server, options);
-    console.log(`Token Monitor minimal: ${url} · ${options.clients} · usage ${options.intervalMs / 1000}s · quotas ${options.limitsEnabled ? `${options.limitsRefreshMs / 1000}s` : 'off'}`);
+    console.log(`Token Monitor service: ${url} · ${options.clients} · usage ${options.intervalMs / 1000}s · quotas ${options.limitsEnabled ? `${options.limitsRefreshMs / 1000}s` : 'off'} · web ${options.webEnabled ? 'on' : 'off'}`);
+    process.send?.({ type: 'minimal-ready', url });
   } catch (error) {
     await stop();
     throw error;

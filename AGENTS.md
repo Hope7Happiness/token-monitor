@@ -5,10 +5,12 @@ This is the entry point for project guidance shared by every coding agent (Claud
 ## Commands
 
 ```bash
-npm start          # launch the Electron widget (= npm run widget / npm run dev)
+npm start          # launch the minimal macOS menu bar app (= widget / dev)
 npm run hub        # start the Node hub on port 17321
-npm run agent      # start the headless collector→hub agent
+npm run agent      # foreground minimal collector/API (optional Hub upload)
 npm run agent:once # one-shot collect+post, then exit (useful for cron/launchd)
+npm run service:start # detached minimal API collector (status/stop counterparts)
+npm run tui       # terminal frontend; quitting leaves the service running
 npm test           # run the node:test suite (node --test "tests/**/*.test.js")
 npm run lint       # ESLint flat config (eslint.config.js)
 npm run verify     # lint + test (single local entry point)

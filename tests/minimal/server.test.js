@@ -15,7 +15,7 @@ async function fixture(t, secret = '') {
     refreshUsage: async () => { refreshes++; }
   };
   const options = readOptions(['--port', '0'], { TOKEN_MONITOR_SECRET: secret });
-  const server = createMinimalServer(runtime, options);
+  const server = createMinimalServer(runtime, { ...options, webEnabled: true });
   const url = await listen(server, options);
   t.after(() => new Promise((resolve) => { server.closeAllConnections(); server.close(resolve); }));
   return { url, refreshes: () => refreshes };
@@ -73,4 +73,14 @@ test('usage refresh blocks foreign origins and repeated requests without refresh
   assert.equal((await fetch(url, { method: 'POST' })).status, 202);
   assert.equal((await fetch(url, { method: 'POST' })).status, 429);
   assert.equal(fixtureData.refreshes(), 1);
+});
+
+test('headless mode serves its authenticated API without loading browser assets', async (t) => {
+  const server = createMinimalServer({ getSnapshot: () => null, getError: () => null }, readOptions(['--port', '0'], {}));
+  const url = await listen(server, readOptions(['--port', '0'], {}));
+  t.after(() => new Promise((resolve) => { server.closeAllConnections(); server.close(resolve); }));
+  assert.equal((await fetch(`${url}/`)).status, 404);
+  assert.equal((await fetch(`${url}/app.js`)).status, 404);
+  assert.equal((await fetch(`${url}/icons/codex.svg`)).status, 404);
+  assert.equal((await fetch(`${url}/api/stats`)).status, 200);
 });

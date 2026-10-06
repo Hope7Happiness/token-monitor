@@ -31,7 +31,7 @@ function dashboardSnapshot(record, runtime, options) {
         ? '请启动 agy 或 Antigravity' : null,
       updatedAt: row.updatedAt, stale: row.status !== 'ok' && row.windows?.length > 0,
       windows: (row.windows || []).map((window) => ({
-        label: window.label, usedPercent: window.usedPercent, resetsAt: window.resetsAt,
+        kind: window.kind, label: window.label, usedPercent: window.usedPercent, resetsAt: window.resetsAt,
         metric: window.metric, remaining: window.remaining, limit: window.limit, currency: window.currency
       }))
     }))
@@ -39,12 +39,12 @@ function dashboardSnapshot(record, runtime, options) {
 }
 
 function createMinimalServer(runtime, options) {
-  const assets = new Map([
+  const assets = new Map((options.webEnabled === false ? [] : [
     ['/', ['index.html', 'text/html; charset=utf-8']],
     ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
     ['/style.css', ['style.css', 'text/css; charset=utf-8']],
     ...CLIENTS.map((id) => [`/icons/${id}.svg`, [`icons/${id}.svg`, 'image/svg+xml; charset=utf-8']])
-  ].map(([route, [file, type]]) => [route, { type, body: fs.readFileSync(path.join(__dirname, 'web', file)) }]));
+  ]).map(([route, [file, type]]) => [route, { type, body: fs.readFileSync(path.join(__dirname, 'web', file)) }]));
   const digest = (value) => createHash('sha256').update(value).digest();
   const expected = digest(options.secret || '');
   let refreshing = false;

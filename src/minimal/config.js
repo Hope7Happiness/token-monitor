@@ -54,6 +54,7 @@ function readOptions(argv = [], env = process.env) {
     commandTimeoutMs: duration(args.timeoutMs ?? env.TOKEN_MONITOR_TOKSCALE_TIMEOUT_MS, 120000, 'timeoutMs'),
     limitsEnabled: boolean(args.limits ?? env.TOKEN_MONITOR_LIMITS_ENABLED, true),
     watchEnabled: boolean(args.watch ?? env.TOKEN_MONITOR_WATCH, false),
+    webEnabled: boolean(args.web ?? env.TOKEN_MONITOR_MINIMAL_WEB, false),
     once: boolean(args.once, false),
     dryRun: boolean(args['dry-run'], false),
     accountsFile: args.accountsFile ?? env.TOKEN_MONITOR_MINIMAL_ACCOUNTS_FILE,

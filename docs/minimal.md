@@ -14,14 +14,37 @@ npm start
 
 The desktop supports macOS and lives in the top menu bar. Click its icon to open a sandboxed usage panel; click outside it or press Escape to close it. The renderer is destroyed when dismissed, so idle monitoring retains no hidden Chromium page. The collector and local HTTP service keep running at their low-frequency intervals until you choose Quit in the icon’s right-click menu. That menu also offers optional login startup. There is no Dock icon, Edge Dock, Discord integration, updater or widget extension. Its randomly generated local API secret stays in Electron main.
 
-For the lowest resource use, run the Node service and view it in your existing browser:
+Headless mode is a **background collector service plus a separate terminal UI**:
 
 ```sh
-npm run headless
-# Open http://127.0.0.1:17322
+npm run service:start
+npm run tui
+npm run service:status
+# Stop collection when finished:
+npm run service:stop
 ```
 
-The Node process runs without Electron, a display, X11, Wayland or a browser installed on the server. The dashboard uses a small HTML/CSS/JS bundle without a frontend build step. Hidden dashboard tabs stop polling; unchanged snapshots do not rebuild the DOM.
+`service:start` detaches the Node collector from its launching terminal and waits until its API is listening. Repeated starts reuse the managed instance. The TUI reads aggregate snapshots over HTTP and never imports the collector or starts provider scans. Close it with `q`, Escape or Ctrl+C; the background service continues collecting. Neither component needs Electron, a display, X11, Wayland or a browser. These commands do not enable automatic login startup.
+
+The TUI uses integer K/M/B token counts, costs, provider connection status, quota meters and reset times. `1`/`2`/`3`, left/right or Tab switch today/month/all-time locally. `r` requests usage only; quota refresh keeps its independent timer. Up/down and PageUp/PageDown scroll when the terminal is short. It polls snapshots every five seconds and redraws only changed frames; network errors keep the last reading visibly offline and retry. Terminal escape sequences from upstream labels are stripped, and exit restores raw mode, cursor and the previous screen.
+
+For a plain text snapshot (also works when stdout is redirected):
+
+```sh
+npm run tui -- --once
+npm run tui -- --once --period allTime
+```
+
+The fixed text dashboard uses Node's readline/TTY interfaces rather than introducing Ink/React or a widget framework: it needs only a table, quota rows, scrolling and a few keys. Node's detached-child/IPC bootstrap is used for manual local start/stop; PID metadata includes a random instance marker checked against the process command before signaling, protecting against PID reuse. State and logs live in the private `minimal-service` subdirectory of the existing shared data directory; bearer secrets are not written there or put in the daemon's command line. For persistent Linux deployment, the existing systemd user service below provides OS-managed restart and login/logout behavior.
+
+`npm run headless` remains available to run the API collector in the foreground, stopped with Ctrl+C. Browser assets are now disabled by default. The previous browser interface is an explicit compatibility option:
+
+```sh
+npm run headless -- --web 1
+# Optional browser: http://127.0.0.1:17322
+```
+
+The macOS menu app explicitly enables its web panel, so this headless default does not change desktop behavior.
 
 ```sh
 npm run headless:once -- --dry-run --limits 0
@@ -51,7 +74,7 @@ The output is under `dist/minimal-mac/mac-<arch>/Token Monitor Minimal.app`. Cop
 - Quota probes run serially and have their own five-minute timer, scheduled after completion. Local token events never refresh quotas. Network requests share a per-provider abort signal and deadline; transient quota failures retain the previous reading visibly as stale.
 - `--watch 1` opts into the existing native event watcher and 3–5 second debounce behavior. It increases resource use and retains the bounded polling fallback on descriptor exhaustion. No additional watch cooldown is added.
 
-This deliberately trades default real-time latency for lower background work. Usage may be one interval old. The dashboard shows a refresh control that requests usage only, with a short request limit to prevent repeated expensive scans. Source data still must be present on the machine running the collector.
+This deliberately trades default real-time latency for lower background work. Usage may be one interval old. The TUI `r` key and optional browser refresh control request usage only, with a short request limit to prevent repeated expensive scans. Source data still must be present on the machine running the collector.
 
 ## Server installation
 
@@ -59,7 +82,8 @@ Run under the same user as the coding CLIs; quotas use their existing local cred
 
 ```sh
 npm ci --omit=dev
-npm run headless
+npm run service:start
+npm run tui
 ```
 
 Only app/agent entry points run the pinned scanner installer. Installation, Hub, tests and lint keep their existing behavior. Standard HTTP(S)_PROXY, ALL_PROXY and NO_PROXY environment settings apply to quota and Hub requests.
@@ -67,16 +91,18 @@ Only app/agent entry points run the pinned scanner installer. Installation, Hub,
 The default server listens only on loopback. SSH forwarding works without publishing a port:
 
 ```sh
-ssh -L 17322:127.0.0.1:17322 your-server
+ssh -L 17324:127.0.0.1:17322 your-server
+npm run tui -- --server http://127.0.0.1:17324
 ```
 
-For a network listener, configure an API secret; startup refuses a non-loopback address without one. Use HTTPS termination for network access. The dashboard prompts for the secret, keeps it in tab memory, and sends it as a bearer header; it is never added to URLs or browser storage.
+For a network listener, configure an API secret; startup refuses a non-loopback address without one. Use HTTPS termination for network access. Set `TOKEN_MONITOR_SECRET` in the TUI environment to send bearer authentication; it is never added to the URL or rendered. TUI requests refuse redirects. When explicitly enabled, the optional browser prompts for the same secret and keeps it only in tab memory.
 
 ```sh
-TOKEN_MONITOR_MINIMAL_HOST=0.0.0.0 TOKEN_MONITOR_SECRET='your-secret' npm run headless
+TOKEN_MONITOR_MINIMAL_HOST=0.0.0.0 TOKEN_MONITOR_SECRET='your-secret' npm run service:start
+TOKEN_MONITOR_SECRET='your-secret' npm run tui -- --server https://monitor.example
 ```
 
-The read-only API is `GET /api/stats` and `GET /api/health`; `POST /api/refresh` requests usage collection. All API endpoints require bearer authentication when a secret is configured. Dashboard DTOs expose totals and quota windows, without account emails, identifiers, source paths, credentials or transcripts. No ingest or account-management API is exposed by the minimal service. An optional existing Hub remains a separate service:
+The read-only API is `GET /api/stats` and `GET /api/health`; `POST /api/refresh` requests usage collection. All API endpoints require bearer authentication when a secret is configured. TUI/browser DTOs expose totals and quota windows (including the normalized window kind for fallback labels), without account emails, identifiers, source paths, credentials or transcripts. No ingest or account-management API is exposed by the minimal service. An optional existing Hub remains a separate service:
 
 ```sh
 TOKEN_MONITOR_HUB_URL=https://your-hub.example TOKEN_MONITOR_SECRET='hub-secret' npm run headless
@@ -123,13 +149,13 @@ chmod 600 /private/accounts.json
 npm run headless -- --accountsFile /private/accounts.json
 ```
 
-The shape matches the existing provider's managed-account contract. Include the complete credential object from the original authorized login, including its OAuth client identity; refresh tokens alone are insufficient. Refreshed AGY credentials are atomically persisted with private permissions. The file can also hold `codexManagedAccounts`, `claudeWebCookie` and `claudeWebOrganizationId` using the existing provider shapes. The minimal UI does not implement account login or switching; use the CLIs or full app for authorization. OAuth credentials measure quota, and do not supply token history.
+The shape matches the existing provider's managed-account contract. Include the complete credential object from the original authorized login, including its OAuth client identity; refresh tokens alone are insufficient. Refreshed AGY credentials are atomically persisted with private permissions. The file can also hold `codexManagedAccounts`, `claudeWebCookie` and `claudeWebOrganizationId` using the existing provider shapes. The minimal TUI and optional browser do not implement account login or switching; use the CLIs or full app for authorization. OAuth credentials measure quota, and do not supply token history.
 
 ## Migration and verification
 
 `npm start`, `npm run widget`, and `npm run dev` now open minimal. `npm run agent` / `agent:once` now run minimal headless. For an existing full configuration or flags such as project/history archives, use `npm run start:full` or `npm run agent:full -- --once`. The full implementation and provider catalogs remain in the repository for compatibility and shared tests; they are not the minimal runtime's user interface. Existing settings and archives are not migrated or overwritten. Update an existing full `.env` client list to `codex,claude,antigravity` before using minimal; unsupported client IDs cause an explicit startup error.
 
-Automated validation is `npm run verify`. `tests/minimal/` covers timer/input validation, aggregate scan grouping, exact totals, skipped metadata reads, serial quota lifecycle, shutdown cancellation, API authentication, privacy projection and refresh behavior. The shared collector tests cover exact deltas, rollover and subprocess termination.
+Automated validation is `npm run verify`. Background-service tests exercise authenticated bootstrap, duplicate start, failed binds, cancelled startup, stale PID metadata and graceful stop; TUI tests exercise period changes without rescanning, refresh isolation, scrolling, terminal-injection filtering, reconnect behavior and raw-mode/cursor restoration. `tests/minimal/` covers timer/input validation, aggregate scan grouping, exact totals, skipped metadata reads, serial quota lifecycle, shutdown cancellation, API authentication, privacy projection and refresh behavior. The shared collector tests cover exact deltas, rollover and subprocess termination.
 
 Run the synthetic benchmark (no private logs, quota requests or pricing network):
 

@@ -26,7 +26,7 @@ else {
     app.setActivationPolicy('accessory');
     electron.Menu.setApplicationMenu(null);
     loadDotEnv();
-    const options = { ...readOptions(), host: '127.0.0.1', port: 0, secret: randomBytes(32).toString('base64url') };
+    const options = { ...readOptions(), webEnabled: true, host: '127.0.0.1', port: 0, secret: randomBytes(32).toString('base64url') };
     runtime = createMinimalRuntime(options, { fetch: createOutboundFetch(), onError: (error) => console.error(`[minimal] ${error.message}`) });
     server = createMinimalServer(runtime, options);
     const url = await listen(server, options);

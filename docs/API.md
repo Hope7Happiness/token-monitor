@@ -1,6 +1,6 @@
 # API
 
-The hub exposes a small JSON HTTP API.
+The hub exposes a small JSON HTTP API. The separate minimal collector/TUI API (`/api/stats`, `/api/health`, `/api/refresh`) is documented in [minimal setup](minimal.md#server-installation); its DTO and authentication rules are independent of the Hub endpoints below.
 
 ## Authentication
 

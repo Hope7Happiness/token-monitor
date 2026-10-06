@@ -1,4 +1,4 @@
-> **Minimal branch:** `npm start` opens the lightweight desktop; `npm run headless` runs the Node-only server. Only Codex, Claude Code and AGY are supported by this entry point. See [minimal setup and performance notes](docs/minimal.md). The full app remains available through `npm run start:full`.
+> **Minimal branch:** macOS menu bar (`npm start`) or a Node background collector + terminal UI (`npm run service:start`, then `npm run tui`). Only Codex, Claude Code and AGY are supported. See [minimal setup and performance notes](docs/minimal.md). The full app remains available through `npm run start:full`.
 
 <p align="right">
    <strong>EN</strong> | <a href="./README.zh-CN.md">简</a> | <a href="./README.zh-TW.md">繁</a> | <a href="./README.ko.md">KO</a> | <a href="./README.ja.md">JA</a>

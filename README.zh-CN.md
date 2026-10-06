@@ -1,4 +1,4 @@
-> **Minimal 分支：** `npm start` 启动轻量桌面；`npm run headless` 启动纯 Node 服务。此入口只支持 Codex、Claude Code 和 AGY。详见 [部署与性能说明](docs/minimal.md)。完整版本可通过 `npm run start:full` 启动。
+> **Minimal 分支：** macOS 菜单栏（`npm start`），或后台采集服务 + 终端 TUI（`npm run service:start` 后执行 `npm run tui`）。仅支持 Codex、Claude Code、AGY。详见 [部署与性能说明](docs/minimal.md)。完整版本可通过 `npm run start:full` 启动。
 
 <p align="right">
    <a href="./README.md">EN</a> | <strong>简</strong> | <a href="./README.zh-TW.md">繁</a> | <a href="./README.ko.md">KO</a> | <a href="./README.ja.md">JA</a>

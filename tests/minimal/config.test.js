@@ -10,6 +10,8 @@ test('minimal defaults select exactly three tools and disable recursive watching
   const options = readOptions([], {});
   assert.equal(options.clients, 'codex,claude,antigravity');
   assert.equal(options.watchEnabled, false);
+  assert.equal(options.webEnabled, false);
+  assert.equal(readOptions(['--web', '1'], {}).webEnabled, true);
   assert.equal(options.intervalMs, 60000);
   assert.equal(options.limitsRefreshMs, 300000);
   assert.equal(readOptions(['--watch', '1', '--clients', 'codex,claude'], {}).watchEnabled, true);
