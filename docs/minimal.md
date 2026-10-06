@@ -24,9 +24,11 @@ npm run service:status
 npm run service:stop
 ```
 
+![Terminal dashboard with synthetic usage and quota data](assets/minimal-tui.svg)
+
 `service:start` detaches the Node collector from its launching terminal and waits until its API is listening. Repeated starts reuse the managed instance. The TUI reads aggregate snapshots over HTTP and never imports the collector or starts provider scans. Close it with `q`, Escape or Ctrl+C; the background service continues collecting. Neither component needs Electron, a display, X11, Wayland or a browser. These commands do not enable automatic login startup.
 
-The TUI uses integer K/M/B token counts, costs, provider connection status, quota meters and reset times. `1`/`2`/`3`, left/right or Tab switch today/month/all-time locally. `r` requests usage only; quota refresh keeps its independent timer. Up/down and PageUp/PageDown scroll when the terminal is short. It polls snapshots every five seconds and redraws only changed frames; network errors keep the last reading visibly offline and retry. Terminal escape sequences from upstream labels are stripped, and exit restores raw mode, cursor and the previous screen.
+The TUI uses integer K/M/B token counts, a compact overview card, colored provider rows with usage-share bars, quota meters and reset times. Active tabs are underlined; quota usage at 80% turns yellow and at 95% turns red, with a text warning marker that also works without color. Provider failures and cached quota readings remain explicit. `1`/`2`/`3`, left/right or Tab switch today/month/all-time locally. `r` requests usage only; quota refresh keeps its independent timer. Up/down and PageUp/PageDown scroll when the terminal is short. It polls snapshots every five seconds and redraws only changed frames, without animation; network errors keep the last reading visibly offline and retry. Styling uses the terminal's ANSI palette, without changing its background. `NO_COLOR` disables colors; non-UTF-8 locales and `TOKEN_MONITOR_TUI_ASCII=1` use ASCII decorations. `--once` always emits uncolored ASCII decorations. Wide labels and emoji count by terminal cells, and upstream escape sequences are stripped before styling. Exit restores raw mode, cursor and the previous screen.
 
 For a plain text snapshot (also works when stdout is redirected):
 

@@ -5,6 +5,14 @@ const { loadDotEnv, parseArgs } = require('../shared/config');
 const { readServiceState } = require('./service');
 const { PERIODS, renderTui } = require('./tuiView');
 
+function terminalAppearance(output, env = process.env) {
+  const locale = env.LC_ALL || env.LC_CTYPE || env.LANG || '';
+  return {
+    color: Boolean(output.isTTY && env.TERM !== 'dumb' && !Object.hasOwn(env, 'NO_COLOR')),
+    unicode: env.TERM !== 'dumb' && env.TOKEN_MONITOR_TUI_ASCII !== '1' && (!locale || /utf-?8/i.test(locale))
+  };
+}
+
 function readTuiOptions(argv = [], env = process.env, state = readServiceState()) {
   const args = parseArgs(argv);
   if (args.help) return { help: true };
@@ -50,6 +58,7 @@ function startTui(options, deps = {}) {
   const output = deps.output || process.stdout;
   const signals = deps.signals || process;
   const fetchFn = deps.fetch || fetch;
+  const appearance = deps.appearance || terminalAppearance(output);
   if (!input.isTTY || !output.isTTY) throw new Error('TUI needs an interactive terminal. Use --once for a text snapshot.');
   const controller = new AbortController();
   let snapshot;
@@ -70,7 +79,7 @@ function startTui(options, deps = {}) {
 
   function draw() {
     if (stopped) return;
-    const frame = renderTui(snapshot, { period, connection, notice, scroll, columns: output.columns || 80, rows: output.rows || 24 });
+    const frame = renderTui(snapshot, { period, connection, notice, scroll, ...appearance, columns: output.columns || 80, rows: output.rows || 24 });
     scroll = frame.scroll; maxScroll = frame.maxScroll || 0;
     if (frame.text !== lastFrame) {
       lastFrame = frame.text;
@@ -163,7 +172,7 @@ async function main(argv = process.argv.slice(2)) {
   }
   if (options.once) {
     const snapshot = validateSnapshot(await apiRequest(options, '/api/stats', { signal: AbortSignal.timeout(5000) }));
-    console.log(renderTui(snapshot, { period: options.period, connection: 'connected', columns: process.stdout.columns || 100, rows: 200, fill: false }).text.trimEnd());
+    console.log(renderTui(snapshot, { period: options.period, connection: 'connected', columns: process.stdout.columns || 100, rows: 200, fill: false, color: false, unicode: false }).text.trimEnd());
     return;
   }
   await startTui(options).done;
@@ -173,4 +182,4 @@ if (require.main === module) main().catch((error) => {
   console.error(error.httpStatus ? error.message : 'TUI could not start. Check --server / --help and that the service is running.');
   process.exitCode = 1;
 });
-module.exports = { readTuiOptions, validateSnapshot, apiRequest, startTui, main };
+module.exports = { readTuiOptions, terminalAppearance, validateSnapshot, apiRequest, startTui, main };

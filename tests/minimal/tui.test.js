@@ -4,8 +4,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const { PassThrough } = require('node:stream');
-const { readTuiOptions, apiRequest, startTui, validateSnapshot } = require('../../src/minimal/tui');
-const { renderTui, cleanText } = require('../../src/minimal/tuiView');
+const { stripVTControlCharacters } = require('node:util');
+const { readTuiOptions, terminalAppearance, apiRequest, startTui, validateSnapshot } = require('../../src/minimal/tui');
+const { renderTui, cleanText, textWidth } = require('../../src/minimal/tuiView');
 
 function stats() {
   return {
@@ -29,7 +30,7 @@ function terminal() {
   output.isTTY = true; output.columns = 80; output.rows = 24;
   let text = '';
   output.on('data', (chunk) => { text += chunk.toString(); });
-  return { input, output, signals: new EventEmitter(), text: () => text };
+  return { input, output, signals: new EventEmitter(), text: () => stripVTControlCharacters(text), rawText: () => text };
 }
 
 test('TUI options discover background service without putting authentication into URLs', () => {
@@ -51,12 +52,49 @@ test('TUI rendering respects terminal dimensions, integer token units, credits a
   assert.match(frame.text, /25% used/);
   assert.match(frame.text, /USD 4\.50 remaining/);
   assert.match(frame.text, /Weekly/);
-  assert.ok(frame.text.split('\n').length < 35);
+  assert.ok(frame.text.split('\n').length < 40);
   const small = renderTui(stats(), { columns: 42, rows: 12, scroll: 999 });
   assert.equal(small.scroll, small.maxScroll);
   assert.match(renderTui(stats(), { columns: 15, rows: 5 }).text, /Token Monitor/);
   assert.equal(cleanText('\x1b]52;c;c2VjcmV0\x07Codex\x1b[2J\n'), 'Codex ');
   assert.throws(() => validateSnapshot({ ...stats(), limits: [{ label: 'Codex', status: 'ok', windows: {} }] }), /invalid/);
+});
+
+test('styled frames keep visible cell bounds and cannot preserve upstream terminal controls', () => {
+  const snapshot = stats();
+  snapshot.periods.today.clients[0].label = '\x1b]52;c;c2VjcmV0\x07编程👩‍💻e\u0301';
+  snapshot.limits[0].label = '\x1b[41mCodex';
+  snapshot.limits[0].stale = true;
+  snapshot.limits[0].windows[0].usedPercent = 98;
+  for (const columns of [40, 59, 72, 91, 120]) {
+    for (const rows of [10, 24, 52]) {
+      for (const color of [false, true]) {
+        const frame = renderTui(snapshot, { columns, rows, color });
+        const plain = stripVTControlCharacters(frame.text);
+        assert.ok(plain.split('\n').length < rows);
+        assert.ok(plain.split('\n').every((row) => textWidth(row) <= columns - 2));
+        assert.doesNotMatch(frame.text, /\x1b\]|\x1b\[41m|c2VjcmV0/);
+        if (color) assert.match(frame.text, /\x1b\[1;36m/);
+        else assert.doesNotMatch(frame.text, /\x1b/);
+      }
+    }
+  }
+  const view = renderTui(snapshot, { columns: 91, rows: 100, color: true, fill: false });
+  assert.match(stripVTControlCharacters(view.text), /98% used !/);
+  assert.match(stripVTControlCharacters(view.text), /cached/);
+  const ascii = renderTui(stats(), { unicode: false, color: false, fill: false, rows: 100 });
+  assert.doesNotMatch(ascii.text, /[^\x00-\x7f]/);
+  assert.match(ascii.text, /TOKENS 16K/);
+  assert.equal(textWidth('╭─█·●👩‍💻编程e\u0301'), 12);
+});
+
+test('terminal appearance honors no-color, ASCII and plain terminal settings', () => {
+  assert.deepEqual(terminalAppearance({ isTTY: true }, { TERM: 'xterm-256color', LANG: 'en_US.UTF-8' }), { color: true, unicode: true });
+  assert.equal(terminalAppearance({ isTTY: true }, { NO_COLOR: '1' }).color, false);
+  assert.equal(terminalAppearance({ isTTY: false }, {}).color, false);
+  assert.deepEqual(terminalAppearance({ isTTY: true }, { TERM: 'dumb' }), { color: false, unicode: false });
+  assert.equal(terminalAppearance({ isTTY: true }, { LANG: 'C' }).unicode, false);
+  assert.equal(terminalAppearance({ isTTY: true }, { LANG: 'en_US.UTF-8', TOKEN_MONITOR_TUI_ASCII: '1' }).unicode, false);
 });
 
 test('TUI authenticates via headers and does not display provider-supplied secret error bodies', async () => {
@@ -95,7 +133,7 @@ test('interactive TUI switches periods locally, requests usage only and restores
   tty.input.write('q');
   await session.done;
   assert.equal(tty.input.isRaw, false);
-  assert.match(tty.text(), /\x1b\[\?25h\x1b\[\?1049l$/);
+  assert.match(tty.rawText(), /\x1b\[\?25h\x1b\[\?1049l$/);
   assert.equal(calls.some((call) => call.url.includes('stop') || call.url.includes('limits')), false);
   assert.equal(tty.signals.listenerCount('SIGTERM'), 0);
 });
