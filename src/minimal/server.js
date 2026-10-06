@@ -27,6 +27,8 @@ function dashboardSnapshot(record, runtime, options) {
     // Explicit projection: account identifiers, credentials, source paths and transcripts stay private.
     limits: (record?.limits?.providers || []).map((row) => ({
       provider: row.provider, label: LABELS[row.provider], status: row.status,
+      connectionHint: row.provider === 'antigravity' && row.source === 'rpc' && row.status === 'notConfigured'
+        ? '请启动 agy 或 Antigravity' : null,
       updatedAt: row.updatedAt, stale: row.status !== 'ok' && row.windows?.length > 0,
       windows: (row.windows || []).map((window) => ({
         label: window.label, usedPercent: window.usedPercent, resetsAt: window.resetsAt,
@@ -40,7 +42,8 @@ function createMinimalServer(runtime, options) {
   const assets = new Map([
     ['/', ['index.html', 'text/html; charset=utf-8']],
     ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
-    ['/style.css', ['style.css', 'text/css; charset=utf-8']]
+    ['/style.css', ['style.css', 'text/css; charset=utf-8']],
+    ...CLIENTS.map((id) => [`/icons/${id}.svg`, [`icons/${id}.svg`, 'image/svg+xml; charset=utf-8']])
   ].map(([route, [file, type]]) => [route, { type, body: fs.readFileSync(path.join(__dirname, 'web', file)) }]));
   const digest = (value) => createHash('sha256').update(value).digest();
   const expected = digest(options.secret || '');

@@ -11,7 +11,7 @@ const { readAccountOptions } = require('./config');
 const LOADERS = {
   codex: () => require('../shared/providers/codex/limits').fetchCodexLimits,
   claude: () => require('../shared/providers/claude/limits').fetchClaudeLimits,
-  antigravity: () => require('../shared/providers/antigravity/limits').fetchAntigravityLimits
+  antigravity: () => require('./antigravity').fetchMinimalAntigravityLimits
 };
 
 function createMinimalRuntime(options, deps = {}) {

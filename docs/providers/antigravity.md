@@ -72,9 +72,13 @@ An account-scoped manual refresh fetches only the requested OAuth account. With 
 
 ### Local RPC
 
-The probe discovers a running process and its local service ports, then connects to the loopback RPC service. It tries the grouped quota summary path first and uses user status to obtain identity when available. Older model-config RPC methods remain fallbacks for Antigravity builds without the grouped quota response.
+The probe discovers a running process and its local service ports, then connects to the loopback RPC service. Interactive CLI builds can appear as a bare `agy` executable with no `language-server` argument. Recognition of that executable does not imply a tokenless RPC service: CLI 1.3.0 generates a private CSRF token even though it has no token flag. It tries the grouped quota summary path first and uses user status to obtain identity when available. Older model-config RPC methods remain fallbacks for Antigravity builds without the grouped quota response.
 
 Identity lookup may fail while quota lookup succeeds. Such a row is valid but anonymous; it must remain device-scoped during hub aggregation. Do not give anonymous RPC rows a cross-device-stable fallback key, because two unrelated Google accounts could otherwise collapse into one row. An anonymous local row also cannot be safely matched to a managed OAuth account, so both rows may be visible until local identity becomes available.
+
+### Minimal macOS native CLI login
+
+The minimal adapter reads the CLI's existing macOS Keychain item (`service=gemini`, `account=antigravity`). It decodes the Go keyring envelope and accepts consumer credentials for the supported official desktop OAuth client. The existing remote OAuth quota path then works even after `agy` exits. An expired access token is refreshed with the matching client; renewed credentials stay in main-process runtime state. Each poll rereads the native item to notice logout or account switches; it never rewrites the CLI keychain or copies credentials into dashboard responses. Explicit managed accounts take precedence. Other platforms and missing/unsupported native credentials retain the shared RPC/managed-account behavior.
 
 ### Standalone OAuth
 

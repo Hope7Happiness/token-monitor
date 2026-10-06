@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createMinimalServer, listen } = require('../../src/minimal/server');
+const { createMinimalServer, dashboardSnapshot, listen } = require('../../src/minimal/server');
 const { readOptions } = require('../../src/minimal/config');
 
 async function fixture(t, secret = '') {
@@ -41,6 +41,29 @@ test('remote secret protects API and allows the login page without exposing data
   assert.equal((await fetch(`${url}/api/health`)).status, 401);
   assert.equal((await fetch(`${url}/api/stats`, { headers: { authorization: 'Bearer wrong' } })).status, 401);
   assert.equal((await fetch(`${url}/api/stats`, { headers: { authorization: 'Bearer test-secret' } })).status, 200);
+});
+
+test('official provider SVGs are local assets and other files stay private', async (t) => {
+  const { url } = await fixture(t);
+  for (const id of ['codex', 'claude', 'antigravity']) {
+    const response = await fetch(`${url}/icons/${id}.svg`);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type'), /^image\/svg\+xml/);
+    const body = await response.text();
+    assert.match(body, /<svg/);
+    assert.doesNotMatch(body, /<script|<foreignObject|(?:href|src)=["']https?:/);
+  }
+  assert.equal((await fetch(`${url}/icons/README.md`)).status, 404);
+});
+
+test('missing AGY RPC service asks to start the client without claiming the account is logged out', () => {
+  const snapshot = dashboardSnapshot({ limits: { providers: [
+    { provider: 'antigravity', source: 'rpc', status: 'notConfigured' },
+    { provider: 'antigravity', source: 'oauth', status: 'unauthorized' }
+  ] } }, { getError: () => null }, readOptions([], {}));
+  assert.equal(snapshot.limits[0].connectionHint, '请启动 agy 或 Antigravity');
+  assert.equal(snapshot.limits[1].connectionHint, null);
+  assert.equal(snapshot.limits[0].source, undefined);
 });
 
 test('usage refresh blocks foreign origins and repeated requests without refreshing quotas', async (t) => {

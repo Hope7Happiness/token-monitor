@@ -18,6 +18,14 @@ function element(tag, text, className) {
   return node;
 }
 
+function providerIcon(id) {
+  const icon = element('img', undefined, 'provider-icon');
+  icon.src = `/icons/${id}.svg`;
+  icon.alt = '';
+  icon.width = 24; icon.height = 24;
+  return icon;
+}
+
 function render() {
   if (!snapshot) return;
   byId('status').textContent = snapshot.error ? '采集异常' : snapshot.ready ? '已连接' : '首次采集中';
@@ -31,7 +39,9 @@ function render() {
   byId('clients').replaceChildren(...current.clients.map((client) => {
     const row = element('div', undefined, 'client');
     row.dataset.id = client.id;
-    row.append(element('span', client.id === 'antigravity' ? 'AG' : client.label.slice(0, 2), 'mark'), element('span', client.label, 'client-name'));
+    const mark = element('span', undefined, 'mark');
+    mark.append(providerIcon(client.id));
+    row.append(mark, element('span', client.label, 'client-name'));
     const value = element('div', snapshot.ready ? count.format(client.tokens) : '—', 'client-value');
     value.append(element('small', snapshot.ready ? money.format(client.cost) : '等待采集'));
     row.append(value);
@@ -40,7 +50,9 @@ function render() {
   byId('limits').replaceChildren(...snapshot.limits.map((provider) => {
     const card = element('article', undefined, 'quota');
     const heading = element('div', undefined, 'quota-heading');
-    heading.append(element('span', provider.label), element('span', `${statuses[provider.status] || provider.status}${provider.stale ? ' · 上次结果' : ''}`, 'muted'));
+    const name = element('span', undefined, 'provider-name');
+    name.append(providerIcon(provider.provider), element('span', provider.label));
+    heading.append(name, element('span', `${provider.connectionHint || statuses[provider.status] || provider.status}${provider.stale ? ' · 上次结果' : ''}`, 'muted'));
     card.append(heading);
     for (const window of provider.windows) {
       const row = element('div', undefined, 'window');

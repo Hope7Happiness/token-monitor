@@ -93,8 +93,9 @@ function isAntigravityCommand(lowerCommand) {
 }
 
 // The Antigravity CLI (`agy` / `antigravity-cli`) hosts the same local language
-// server as the IDE, but launches it without a `--csrf_token` flag and under a
-// different process name. Path-anchor the match so unrelated binaries/arguments
+// server as the IDE, under a different process name. Older builds expose no
+// `--csrf_token`; newer interactive builds keep a private token internally.
+// Anchor the executable match so unrelated binaries/arguments
 // (e.g. `/opt/imagytool/...`, `legacy-agent`) do not match.
 // `--hub` turns the CLI into a network-facing RPC service that does require a
 // CSRF token, so the flag is matched once here and reused by the "we saw it but
@@ -105,9 +106,7 @@ function isHubModeCommand(command) {
 
 function isAntigravityCliCommand(lowerCommand) {
   if (/(^|[/\\])(antigravity-cli|antigravity_cli)([\s/\\]|$)/.test(lowerCommand)) return true;
-  if (/(^|[/\\])agy(\.exe)?(\s|$)/.test(lowerCommand)) {
-    return isLanguageServerCommand(lowerCommand) || isHubModeCommand(lowerCommand);
-  }
+  if (/^(?:[^\s]*[/\\])?agy(?:\.exe)?(?:\s|$)/.test(lowerCommand)) return true;
   return false;
 }
 
@@ -164,7 +163,11 @@ function extractPortFlag(flag, command) {
 // the matchers above keep anchoring on path separators and whitespace alone;
 // quoted flag values further along the line are left untouched.
 function commandForMatching(command) {
-  return command.replace(/^"([^"]+)"(?=\s|$)/, '$1').toLowerCase();
+  return command.replace(/^"([^"]+)"(?=\s|$)/, (_, executable) => {
+    // Keep the executable boundary when a quoted CLI path contains spaces.
+    const cli = executable.match(/(?:^|[/\\])(agy(?:\.exe)?)$/i);
+    return cli ? cli[1] : executable;
+  }).toLowerCase();
 }
 
 function parseProcessLine(line) {

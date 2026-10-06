@@ -82,6 +82,17 @@ test('parseProcessLine matches the agy CLI without a csrf token (kind=cli)', () 
   assert.equal(info.csrfToken, '');
 });
 
+test('parseProcessLine recognizes the interactive agy executable without language-server flags', () => {
+  for (const command of ['agy', '/Users/example/.local/bin/agy', 'agy --model gemini', '"C:\\Program Files\\Antigravity\\agy.exe"']) {
+    const info = probe._parseProcessLine(`60123 ${command}`);
+    assert.equal(info.kind, 'cli');
+    assert.equal(info.pid, 60123);
+  }
+  for (const command of ['/usr/bin/python script.py /Users/example/.local/bin/agy', 'C:\\tools\\watcher.exe --exec C:\\Users\\j\\agy.exe language-server']) {
+    assert.equal(probe._parseProcessLine(`60124 ${command}`), null);
+  }
+});
+
 test('parseProcessLine matches the antigravity-cli language server path (kind=cli)', () => {
   const line = '60124 /opt/antigravity-cli/resources/language_server_macos --standalone';
   const info = probe._parseProcessLine(line);
@@ -873,9 +884,9 @@ test('parseProcessLine allows bare agy CLI without hub flag and without CSRF (le
   assert.equal(info.hubPort, null);
 });
 
-test('parseProcessLine returns null for interactive agy agent sessions', () => {
+test('parseProcessLine includes interactive agy sessions that host the local RPC server', () => {
   const line = '28668 "C:\\Users\\yuwell\\AppData\\Local\\agy\\bin\\agy.exe" --mode=accept-edits --dangerously-skip-permissions';
-  assert.equal(probe._parseProcessLine(line), null);
+  assert.equal(probe._parseProcessLine(line).kind, 'cli');
 });
 
 // Port discovery is a fallback, not a gate: it fails for reasons that say
