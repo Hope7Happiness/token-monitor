@@ -18,8 +18,8 @@ function panelBounds(trayBounds, workArea, size = { width: 420, height: 720 }) {
 }
 
 function createMenuBar({ app, BrowserWindow, Tray, Menu, nativeImage, screen, runtime, url, secret }) {
-  const icon = nativeImage.createFromPath(path.join(__dirname, '../../assets/icons/tray-token-monitor.png'))
-    .resize({ height: 20, quality: 'best' });
+  // Matching 18pt and @2x assets keep the template sharp on Retina displays.
+  const icon = nativeImage.createFromPath(path.join(__dirname, '../../assets/icons/tray-minimalTemplate.png'));
   if (icon.isEmpty()) throw new Error('Menu bar icon could not be loaded');
   icon.setTemplateImage(true);
   const tray = new Tray(icon);
@@ -28,7 +28,7 @@ function createMenuBar({ app, BrowserWindow, Tray, Menu, nativeImage, screen, ru
   let disposed = false;
   let refreshing = false;
   let tooltip = '';
-  const numbers = new Intl.NumberFormat('en-US');
+  const numbers = new Intl.NumberFormat('en-US', { notation: 'compact', compactDisplay: 'short', maximumFractionDigits: 0 });
 
   function updateTooltip(record = runtime.getSnapshot()) {
     const next = ['Token Monitor Minimal · 点击查看用量，右键打开菜单',

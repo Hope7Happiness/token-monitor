@@ -15,7 +15,7 @@ module.exports = {
     'src/shared/**/*',
     'scripts/vendor/tokscale.json',
     'assets/icon.png',
-    'assets/icons/tray-token-monitor.png',
+    'assets/icons/tray-minimalTemplate*.png',
     'package.json'
   ],
   asarUnpack: ['node_modules/@tokscale/**/*', 'node_modules/tokscale/**/*', 'node_modules/koffi/**/*'],
