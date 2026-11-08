@@ -159,3 +159,15 @@ test('disconnect preserves the last snapshot and SIGTERM restores terminal and c
   assert.equal(signal.aborted, true);
   assert.equal(tty.input.isRaw, false);
 });
+
+test('weekly TUI is optional for old servers and labels partial coverage without inventing zero', () => {
+  assert.equal(readTuiOptions(['--period', 'week'], {}, null).period, 'week');
+  const old = renderTui(stats(), { period: 'week', columns: 100, rows: 40 });
+  assert.match(old.text, /Weekly history is not available/);
+  assert.match(old.text, /TOKENS --/);
+  const value = stats();
+  value.periods.week = { totalTokens: 1234, totalCost: 1, complete: false, availableDays: 1, expectedDays: 6, clients: [] };
+  const partial = renderTui(value, { period: 'week', columns: 100, rows: 40 });
+  assert.match(partial.text, /TOKENS >= 1K/);
+  assert.match(partial.text, /Partial week: 1\/6 days reported/);
+});

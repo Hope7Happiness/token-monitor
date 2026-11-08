@@ -21,6 +21,8 @@ function createMinimalRuntime(options, deps = {}) {
   const accountOptions = deps.accountOptions || readAccountOptions(options.accountsFile);
   const controller = new AbortController();
   let usage = null;
+  let history = null;
+  let historyUpdatedAt = null;
   let stopped = false;
   let timer = null;
   let limitsFlight = null;
@@ -111,7 +113,9 @@ function createMinimalRuntime(options, deps = {}) {
     commandTimeoutMs: options.commandTimeoutMs,
     compactUsage: true,
     projectsEnabled: false,
-    historyEnabled: false,
+    historyEnabled: true,
+    historyCapDays: 90,
+    historyIntervalMs: 15 * 60 * 1000,
     dailyHistoryArchiveEnabled: false,
     anchorPersistenceEnabled: false,
     wslScanEnabled: false,
@@ -121,7 +125,14 @@ function createMinimalRuntime(options, deps = {}) {
     logger: deps.logger,
     onUpdate(summary) {
       if (stopped) return;
-      usage = summary;
+      // Keep only the latest bounded graph; ordinary today ticks omit history.
+      if (summary.history) {
+        history = { daily: summary.history.daily.slice(-90) };
+        historyUpdatedAt = summary.updatedAt;
+      }
+      const diagnostics = collector.getDiagnostics?.();
+      usage = { ...summary, history, historyUpdatedAt,
+        historyStale: Boolean(diagnostics?.lastHistoryFailureCode) };
       lastError = null;
       publish();
       if (!settled) { settled = true; resolveReady(summary); }

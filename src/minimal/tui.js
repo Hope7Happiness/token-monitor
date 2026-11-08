@@ -24,13 +24,13 @@ function readTuiOptions(argv = [], env = process.env, state = readServiceState()
   const pollMs = Number(args.poll ?? 5000);
   if (!Number.isInteger(pollMs) || pollMs < 1000 || pollMs > 60000) throw new Error('--poll must be between 1000 and 60000 ms');
   const period = args.period || 'today';
-  if (!PERIODS.includes(period)) throw new Error('--period must be today, month or allTime');
+  if (!PERIODS.includes(period)) throw new Error('--period must be today, week, month or allTime');
   return { server: server.toString().replace(/\/$/, ''), secret: env.TOKEN_MONITOR_SECRET || '', pollMs, period, once: args.once === true || args.once === '1' };
 }
 
 function validateSnapshot(value) {
   if (!value || typeof value.ready !== 'boolean' || !Array.isArray(value.limits)
-    || PERIODS.some((period) => {
+    || ['today', 'month', 'allTime'].some((period) => {
       const current = value.periods?.[period];
       return !Number.isFinite(current?.totalTokens) || !Number.isFinite(current?.totalCost)
         || !Array.isArray(current?.clients) || current.clients.some((client) => typeof client?.label !== 'string' || !Number.isFinite(client.tokens) || !Number.isFinite(client.cost));
@@ -137,9 +137,9 @@ function startTui(options, deps = {}) {
     if (key.name === 'paste-end') { pasted = false; return; }
     if (pasted || stopped) return;
     if (key.name === 'q' || key.name === 'escape' || key.ctrl && ['c', 'd'].includes(key.name)) return stop();
-    if (['1', '2', '3'].includes(text)) { period = PERIODS[Number(text) - 1]; scroll = 0; }
-    else if (key.name === 'right' || key.name === 'tab') { period = PERIODS[(PERIODS.indexOf(period) + 1) % 3]; scroll = 0; }
-    else if (key.name === 'left') { period = PERIODS[(PERIODS.indexOf(period) + 2) % 3]; scroll = 0; }
+    if (['1', '2', '3', '4'].includes(text)) { period = PERIODS[Number(text) - 1]; scroll = 0; }
+    else if (key.name === 'right' || key.name === 'tab') { period = PERIODS[(PERIODS.indexOf(period) + 1) % PERIODS.length]; scroll = 0; }
+    else if (key.name === 'left') { period = PERIODS[(PERIODS.indexOf(period) + PERIODS.length - 1) % PERIODS.length]; scroll = 0; }
     else if (key.name === 'down') scroll++;
     else if (key.name === 'up') scroll--;
     else if (key.name === 'pagedown') scroll += Math.max(1, (output.rows || 24) - 8);
@@ -167,7 +167,7 @@ async function main(argv = process.argv.slice(2)) {
   loadDotEnv();
   const options = readTuiOptions(argv);
   if (options.help) {
-    console.log(`Token Monitor TUI\n\nnpm run service:start      Background collector\nnpm run tui                Connect to the service\nnpm run tui -- --once       Print a text snapshot\n\n--server http://127.0.0.1:17322  Local or remote service\n--period today|month|allTime    Initial view\n--poll 5000                    UI polling milliseconds\n\nSet TOKEN_MONITOR_SECRET for an authenticated service.\nKeys: 1/2/3 or left/right = period; r = refresh usage; up/down/PgUp/PgDn = scroll; q/Esc/Ctrl+C = close TUI.\nClosing TUI leaves the background collector running.`);
+    console.log(`Token Monitor TUI\n\nnpm run service:start      Background collector\nnpm run tui                Connect to the service\nnpm run tui -- --once       Print a text snapshot\n\n--server http://127.0.0.1:17322  Local or remote service\n--period today|week|month|allTime    Initial view\n--poll 5000                    UI polling milliseconds\n\nSet TOKEN_MONITOR_SECRET for an authenticated service.\nKeys: 1/2/3/4 or left/right = period; r = refresh usage; up/down/PgUp/PgDn = scroll; q/Esc/Ctrl+C = close TUI.\nClosing TUI leaves the background collector running.`);
     return;
   }
   if (options.once) {

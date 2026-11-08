@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash, timingSafeEqual } = require('node:crypto');
 const { CLIENTS, LABELS } = require('./config');
+const { dailyUsage } = require('./dailyUsage');
 
 function dashboardSnapshot(record, runtime, options) {
   const periods = {};
@@ -19,7 +20,10 @@ function dashboardSnapshot(record, runtime, options) {
       }))
     };
   }
+  const daily = dailyUsage(record, options);
+  periods.week = daily.week;
   return {
+    daily,
     ready: Boolean(record), updatedAt: record?.updatedAt || null,
     error: runtime.getError() ? 'Usage collection failed; see service logs.' : null, intervalMs: options.intervalMs,
     limitsRefreshMs: options.limitsRefreshMs, watchEnabled: options.watchEnabled,

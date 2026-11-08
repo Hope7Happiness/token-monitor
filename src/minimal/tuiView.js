@@ -4,8 +4,8 @@ const { stripVTControlCharacters } = require('node:util');
 const numbers = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 0 });
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 const segments = new Intl.Segmenter('en', { granularity: 'grapheme' });
-const PERIODS = ['today', 'month', 'allTime'];
-const PERIOD_LABELS = ['Today', 'Month', 'All time'];
+const PERIODS = ['today', 'month', 'allTime', 'week'];
+const PERIOD_LABELS = ['Today', 'Month', 'All time', 'Week'];
 const STATUS = { ok: 'connected', notConfigured: 'not configured', unavailable: 'unavailable', unauthorized: 'sign in again', rateLimited: 'rate limited', sourceRateLimited: 'rate limited', error: 'read failed' };
 const STYLES = { muted: '2', strong: '1', accent: '36', title: '1;36', selected: '1;4;36', codex: '36', claude: '33', antigravity: '35', good: '32', warning: '33', danger: '1;31' };
 
@@ -89,6 +89,8 @@ function renderTui(snapshot, { period = 'today', columns = 80, rows = 30, scroll
   };
   const selected = PERIODS.includes(period) ? period : 'today';
   const current = snapshot?.periods?.[selected];
+  const metricAvailable = snapshot?.ready && current?.totalTokens != null;
+  const partial = selected === 'week' && current?.complete === false;
   const innerWidth = width - 4;
   const content = [];
   const heading = ` ${PERIOD_LABELS[PERIODS.indexOf(selected)].toUpperCase()} OVERVIEW `;
@@ -96,10 +98,12 @@ function renderTui(snapshot, { period = 'today', columns = 80, rows = 30, scroll
   const costWidth = Math.min(29, Math.floor(innerWidth / 2));
   const tokenWidth = innerWidth - costWidth;
   const metric = (label, value, size) => [span(label + ' ', 'muted'), cell(value, Math.max(0, size - label.length - 1), 'strong')];
-  content.push(line(span(glyph.side + ' ', 'muted'), ...metric('TOKENS', snapshot?.ready ? numbers.format(current?.totalTokens || 0) : '--', tokenWidth),
-    ...metric('EST. COST', snapshot?.ready ? money.format(current?.totalCost || 0) : '--', costWidth), span(' ' + glyph.side, 'muted')));
+  content.push(line(span(glyph.side + ' ', 'muted'), ...metric('TOKENS', metricAvailable ? (partial ? '>= ' : '') + numbers.format(current.totalTokens) : '--', tokenWidth),
+    ...metric('EST. COST', metricAvailable ? (partial ? '>= ' : '') + money.format(current.totalCost || 0) : '--', costWidth), span(' ' + glyph.side, 'muted')));
   content.push(line(span(glyph.bl + glyph.rule.repeat(width - 2) + glyph.br, 'muted')));
   if (!snapshot?.ready) content.push(line(span('  Waiting for the first usage scan...', 'muted')));
+  if (selected === 'week' && !metricAvailable) content.push(line(span('  Weekly history is not available on this service.', 'muted')));
+  if (partial) content.push(line(span(`  Partial week: ${current.availableDays}/${current.expectedDays} days reported.`, 'muted')));
   if (snapshot?.error) content.push(line(span('  ! Usage scan failed; see the service log.', 'warning')));
   content.push('');
 
@@ -148,7 +152,7 @@ function renderTui(snapshot, { period = 'today', columns = 80, rows = 30, scroll
   const updated = snapshot?.updatedAt ? new Date(snapshot.updatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '--';
   const footer = [line(span(glyph.rule.repeat(width), 'muted')),
     line(span(notice || `Updated ${updated} ${glyph.separator} usage ${snapshot?.intervalMs / 1000 || '--'}s ${glyph.separator} quotas ${snapshot?.limitsRefreshMs / 1000 || '--'}s`, notice ? 'warning' : 'muted')),
-    line(span(' 1/2/3', 'strong'), span(width < 65 ? ' view  ' : ' period  ', 'muted'), span('r', 'strong'), span(' refresh  ', 'muted'),
+    line(span(' 1/2/3/4', 'strong'), span(width < 65 ? ' view  ' : ' period  ', 'muted'), span('r', 'strong'), span(' refresh  ', 'muted'),
       ...(width >= 65 ? [span(glyph.scroll, 'strong'), span(' scroll  ', 'muted')] : []), span('q', 'strong'), span(' quit', 'muted'))];
   const available = Math.max(1, height - header.length - footer.length - 1);
   const maxScroll = Math.max(0, content.length - available);

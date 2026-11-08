@@ -43,7 +43,8 @@ test('quotas run serially, never refresh from token updates, and stop removes sc
   assert.equal(peak, 1);
   assert.deepEqual(calls, ['codex', 'claude', 'antigravity']);
   assert.equal(captured.options.compactUsage, true);
-  assert.equal(captured.options.historyEnabled, false);
+  assert.equal(captured.options.historyEnabled, true);
+  assert.equal(captured.options.historyCapDays, 90);
   assert.equal(captured.options.watchEnabled, false);
   assert.equal(timers[0].delay, 300000);
   await runtime.refreshUsage();
